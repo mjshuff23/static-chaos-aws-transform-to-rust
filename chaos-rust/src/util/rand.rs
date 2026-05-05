@@ -129,13 +129,28 @@ pub fn number_range(from: i32, to: i32) -> i32 {
     (from as i64 + raw) as i32
 }
 
-/// Integer square root. Returns floor(sqrt(num)).
-/// Matches the C `isquare()` function.
+/// Integer square root. Returns the largest i such that i*i < num,
+/// matching the runtime implementation in src/db.c (line 3445).
+///
+/// Note: this differs from src/xrand.c which uses `(int)sqrt((double)num)`.
+/// The db.c version has a known off-by-one for perfect squares (e.g.,
+/// isquare(4) returns 1, not 2) but is preserved for gameplay parity
+/// since db.c is the actual linked implementation.
 pub fn isquare(num: i32) -> i32 {
-    if num <= 0 {
+    if num == 0 {
         return 0;
     }
-    (num as f64).sqrt() as i32
+    if num == 1 {
+        return 1;
+    }
+    if num < 0 {
+        return 0;
+    }
+    let mut i: i32 = 2;
+    while (i as i64) * (i as i64) < (num as i64) {
+        i += 1;
+    }
+    i - 1
 }
 
 /// Reset the PRNG state (for testing reproducibility).
@@ -248,21 +263,31 @@ mod tests {
 
     #[test]
     fn test_isquare_values() {
+        // Matches db.c behavior: returns largest i such that i*i < num
         assert_eq!(isquare(0), 0);
         assert_eq!(isquare(-5), 0);
         assert_eq!(isquare(1), 1);
-        assert_eq!(isquare(4), 2);
-        assert_eq!(isquare(9), 3);
+        assert_eq!(isquare(4), 1);  // db.c: 2*2=4, 4<4 false, return 2-1=1
+        assert_eq!(isquare(5), 2);  // db.c: 2*2=4, 4<5 true; 3*3=9, 9<5 false, return 3-1=2
+        assert_eq!(isquare(9), 2);  // db.c: 3*3=9, 9<9 false, return 3-1=2
+        assert_eq!(isquare(10), 3); // db.c: 3*3=9, 9<10 true; 4*4=16, 16<10 false, return 4-1=3
         assert_eq!(isquare(15), 3);
-        assert_eq!(isquare(16), 4);
-        assert_eq!(isquare(100), 10);
-        assert_eq!(isquare(99), 9);
+        assert_eq!(isquare(16), 3); // db.c: 4*4=16, 16<16 false, return 4-1=3
+        assert_eq!(isquare(17), 4); // db.c: 4*4=16, 16<17 true; 5*5=25, 25<17 false, return 5-1=4
+        assert_eq!(isquare(100), 9); // db.c: 10*10=100, 100<100 false, return 10-1=9
+        assert_eq!(isquare(99), 9);  // db.c: 9*9=81, 81<99; 10*10=100, 100<99 false, return 10-1=9
     }
 
     #[test]
     fn test_isquare_large_values() {
-        assert_eq!(isquare(1000000), 1000);
-        assert_eq!(isquare(2147483647), 46340); // i32::MAX
+        // db.c: for 1000000, i iterates until i*i >= 1000000
+        // 1000*1000 = 1000000, 1000000 < 1000000 false, return 1000-1 = 999
+        assert_eq!(isquare(1000000), 999);
+        // For i32::MAX (2147483647): sqrt ~= 46340.95
+        // 46341*46341 = 2147488281 > i32::MAX, so loop: 46341^2 >= 2147483647
+        // Actually in i64: 46340*46340 = 2147395600 < 2147483647, 46341*46341 = 2147488281 >= 2147483647
+        // So return 46341-1 = 46340
+        assert_eq!(isquare(2147483647), 46340);
     }
 
     #[test]

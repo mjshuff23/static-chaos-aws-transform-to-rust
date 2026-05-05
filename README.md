@@ -65,9 +65,9 @@ make -C src chaosium USE_RUST=1 CARGO=$HOME/.cargo/bin/cargo
 cargo test --manifest-path chaos-rust/Cargo.toml
 ```
 
-Runs 48 tests total:
+Runs 49 tests total:
 
-- 27 unit tests (config path resolution + xrand PRNG)
+- 28 unit tests (config path resolution + xrand PRNG)
 - 8 integration tests (full init/getter cycle)
 - 13 parity tests (C-vs-Rust output comparison)
 
