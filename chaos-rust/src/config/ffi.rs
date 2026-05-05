@@ -4,10 +4,14 @@
 //! matching the signatures declared in src/merc.h (lines 111-125).
 //! These functions return *const c_char pointers that remain valid
 //! for the lifetime of the program.
+//!
+//! Every extern "C" entry point is wrapped in `catch_unwind` to prevent
+//! Rust panics from unwinding across the FFI boundary into C.
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::panic;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 
@@ -22,9 +26,17 @@ use super::{area_file_path_rotating, get_area_dir_str, get_area_list_path_str,
 /// Pointers returned remain valid for the program lifetime since entries are never removed.
 static FFI_CACHE: OnceLock<Mutex<HashMap<String, CString>>> = OnceLock::new();
 
+/// A fallback empty C string for panic recovery.
+static EMPTY_CSTR: &[u8] = b"\0";
+
 /// Get or initialize the FFI cache.
 fn cache() -> &'static Mutex<HashMap<String, CString>> {
     FFI_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Return a pointer to a static empty string (used when catch_unwind catches a panic).
+fn empty_ptr() -> *const c_char {
+    EMPTY_CSTR.as_ptr() as *const c_char
 }
 
 /// Cache a Rust string and return a *const c_char that is valid for the program lifetime.
@@ -75,90 +87,95 @@ fn area_file_cache() -> &'static Mutex<AreaFileCache> {
 }
 
 // --- FFI exports matching src/merc.h lines 111-125 ---
+// Each is wrapped in catch_unwind to prevent panics from crossing FFI.
 
 #[no_mangle]
 pub extern "C" fn init_path_overrides() {
-    init_path_overrides_impl();
+    let _ = panic::catch_unwind(|| {
+        init_path_overrides_impl();
+    });
 }
 
 #[no_mangle]
 pub extern "C" fn get_player_dir() -> *const c_char {
-    cache_str(get_player_dir_str())
+    panic::catch_unwind(|| cache_str(get_player_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_player_temp_dir() -> *const c_char {
-    cache_str(get_player_temp_dir_str())
+    panic::catch_unwind(|| cache_str(get_player_temp_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_area_dir() -> *const c_char {
-    cache_str(get_area_dir_str())
+    panic::catch_unwind(|| cache_str(get_area_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_area_list_path() -> *const c_char {
-    cache_str(get_area_list_path_str())
+    panic::catch_unwind(|| cache_str(get_area_list_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_bug_file_path() -> *const c_char {
-    cache_str(get_bug_file_path_str())
+    panic::catch_unwind(|| cache_str(get_bug_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_idea_file_path() -> *const c_char {
-    cache_str(get_idea_file_path_str())
+    panic::catch_unwind(|| cache_str(get_idea_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_typo_file_path() -> *const c_char {
-    cache_str(get_typo_file_path_str())
+    panic::catch_unwind(|| cache_str(get_typo_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_note_file_path() -> *const c_char {
-    cache_str(get_note_file_path_str())
+    panic::catch_unwind(|| cache_str(get_note_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_shutdown_file_path() -> *const c_char {
-    cache_str(get_shutdown_file_path_str())
+    panic::catch_unwind(|| cache_str(get_shutdown_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_copyover_file_path() -> *const c_char {
-    cache_str(get_copyover_file_path_str())
+    panic::catch_unwind(|| cache_str(get_copyover_file_path_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_mobprog_dir() -> *const c_char {
-    cache_str(get_mobprog_dir_str())
+    panic::catch_unwind(|| cache_str(get_mobprog_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_finger_dir() -> *const c_char {
-    cache_str(get_finger_dir_str())
+    panic::catch_unwind(|| cache_str(get_finger_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn get_note_dir() -> *const c_char {
-    cache_str(get_note_dir_str())
+    panic::catch_unwind(|| cache_str(get_note_dir_str())).unwrap_or_else(|_| empty_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn area_file_path(filename: *const c_char) -> *const c_char {
-    // SAFETY: The filename pointer comes from C and must be a valid null-terminated string.
-    // This is the only unsafe block in the FFI boundary, required to read the C string.
-    let fname = if filename.is_null() {
-        ""
-    } else {
-        unsafe { CStr::from_ptr(filename) }
-            .to_str()
-            .unwrap_or("")
-    };
+    panic::catch_unwind(|| {
+        // SAFETY: The filename pointer comes from C and must be a valid null-terminated string.
+        let fname = if filename.is_null() {
+            ""
+        } else {
+            unsafe { CStr::from_ptr(filename) }
+                .to_str()
+                .unwrap_or("")
+        };
 
-    let result = area_file_path_rotating(fname);
-    let mut guard = area_file_cache().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    guard.next(&result)
+        let result = area_file_path_rotating(fname);
+        let mut guard = area_file_cache().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        guard.next(&result)
+    })
+    .unwrap_or_else(|_| empty_ptr())
 }
