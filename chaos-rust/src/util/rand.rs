@@ -1,4 +1,3 @@
-//! Lagged Fibonacci PRNG matching src/xrand.c behavior exactly.
 //! Lagged Fibonacci PRNG and integer math utilities.
 //!
 //! This module implements the core PRNG algorithm shared by src/xrand.c and
@@ -28,9 +27,7 @@ const MASK: i32 = (1 << 30) - 1;
 
 impl PrngState {
     fn new() -> Self {
-        PrngState {
-            rgi_state: [0; 58],
-        }
+        PrngState { rgi_state: [0; 58] }
     }
 
     /// Initialize the state (matches the C init block in number_mm).
@@ -82,7 +79,8 @@ static PRNG: Mutex<Option<PrngState>> = Mutex::new(None);
 /// Generate a random number using the lagged Fibonacci PRNG.
 /// Returns a value in [0, 2^24 - 1].
 ///
-/// This matches the C `number_mm()` function exactly.
+/// This matches the shared C generation step after this module's
+/// deterministic xrand-compatible seed path is initialized.
 pub fn number_mm() -> i32 {
     let mut guard = PRNG.lock().unwrap_or_else(|p| p.into_inner());
     let state = guard.get_or_insert_with(PrngState::new);
@@ -138,22 +136,19 @@ pub fn number_range(from: i32, to: i32) -> i32 {
     (from as i64 + raw) as i32
 }
 
-/// Integer square root. Returns the largest i such that i*i < num,
-/// matching the runtime implementation in src/db.c (line 3445).
+/// Integer square root matching the runtime implementation in src/db.c
+/// (line 3445).
 ///
 /// Note: this differs from src/xrand.c which uses `(int)sqrt((double)num)`.
 /// The db.c version has a known off-by-one for perfect squares (e.g.,
-/// isquare(4) returns 1, not 2) but is preserved for gameplay parity
-/// since db.c is the actual linked implementation.
+/// isquare(4) returns 1, not 2) and returns 1 for negative inputs because
+/// the loop never runs. Both behaviors are preserved for gameplay parity.
 pub fn isquare(num: i32) -> i32 {
     if num == 0 {
         return 0;
     }
     if num == 1 {
         return 1;
-    }
-    if num < 0 {
-        return 0;
     }
     let mut i: i32 = 2;
     while (i as i64) * (i as i64) < (num as i64) {
@@ -274,17 +269,17 @@ mod tests {
     fn test_isquare_values() {
         // Matches db.c behavior: returns largest i such that i*i < num
         assert_eq!(isquare(0), 0);
-        assert_eq!(isquare(-5), 0);
+        assert_eq!(isquare(-5), 1); // db.c: loop does not run for negatives, returns 2-1=1
         assert_eq!(isquare(1), 1);
-        assert_eq!(isquare(4), 1);  // db.c: 2*2=4, 4<4 false, return 2-1=1
-        assert_eq!(isquare(5), 2);  // db.c: 2*2=4, 4<5 true; 3*3=9, 9<5 false, return 3-1=2
-        assert_eq!(isquare(9), 2);  // db.c: 3*3=9, 9<9 false, return 3-1=2
+        assert_eq!(isquare(4), 1); // db.c: 2*2=4, 4<4 false, return 2-1=1
+        assert_eq!(isquare(5), 2); // db.c: 2*2=4, 4<5 true; 3*3=9, 9<5 false, return 3-1=2
+        assert_eq!(isquare(9), 2); // db.c: 3*3=9, 9<9 false, return 3-1=2
         assert_eq!(isquare(10), 3); // db.c: 3*3=9, 9<10 true; 4*4=16, 16<10 false, return 4-1=3
         assert_eq!(isquare(15), 3);
         assert_eq!(isquare(16), 3); // db.c: 4*4=16, 16<16 false, return 4-1=3
         assert_eq!(isquare(17), 4); // db.c: 4*4=16, 16<17 true; 5*5=25, 25<17 false, return 5-1=4
         assert_eq!(isquare(100), 9); // db.c: 10*10=100, 100<100 false, return 10-1=9
-        assert_eq!(isquare(99), 9);  // db.c: 9*9=81, 81<99; 10*10=100, 100<99 false, return 10-1=9
+        assert_eq!(isquare(99), 9); // db.c: 9*9=81, 81<99; 10*10=100, 100<99 false, return 10-1=9
     }
 
     #[test]
