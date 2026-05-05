@@ -1,4 +1,4 @@
 make: Entering directory '/home/yokito/projects/static-chaos-aws-transform-to-rust/src'
-Makefile:19: warning: ignoring prerequisites on suffix rule definition
+Makefile:36: warning: ignoring prerequisites on suffix rule definition
 make: 'chaosium' is up to date.
 make: Leaving directory '/home/yokito/projects/static-chaos-aws-transform-to-rust/src'
