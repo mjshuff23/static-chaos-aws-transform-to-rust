@@ -90,12 +90,12 @@ Logs are written to `env/dev/log/<timestamp>.log`.
 
 ## Current Migration Status
 
-| Module           | Status      | Notes                                                        |
-| ---------------- | ----------- | ------------------------------------------------------------ |
-| `src/envconfig.c`| Migrated    | Behind `USE_RUST=1`; path resolution via `chaos-rust/src/config/` |
-| `src/xrand.c`   | Implemented | Rust impl + tests in `util/rand.rs`; not yet linked (symbols in db.c) |
-| `src/bit.c`     | Planned     | Phase 1b optional pilot                                      |
-| All other modules| Not started | Deferred to later phases                                     |
+| Module           | Status      | Notes                                                                 |
+| ---------------- | ----------- | --------------------------------------------------------------------- |
+| `src/envconfig.c`| Migrated    | Behind `USE_RUST=1`; path resolution via `chaos-rust/src/config/`     |
+| `src/xrand.c`    | Implemented | Rust impl + tests in `util/rand.rs`; not yet linked (symbols in db.c) |
+| `src/bit.c`      | Planned     | Phase 1b optional pilot                                               |
+| All other modules| Not started | Deferred to later phases                                              |
 
 The Rust workspace lives in `chaos-rust/` with modules:
 
@@ -117,7 +117,7 @@ The Rust workspace lives in `chaos-rust/` with modules:
 
 ## Project Layout
 
-```
+```bash
 .
 +-- Cargo.toml                    # Workspace root
 +-- Cargo.lock                    # Tracked (app/server workspace)
