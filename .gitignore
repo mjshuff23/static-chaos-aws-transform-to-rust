@@ -49,6 +49,10 @@ Temporary Items
 # Build artifacts
 src/chaosium
 src/*.o
+build.log
+
+# Rust build artifacts
+target/
 
 # Runtime data
 chaosium.log
