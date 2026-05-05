@@ -12,6 +12,8 @@ O_FILES = act_comm.o act_info.o act_move.o act_obj.o act_wiz.o bit.o board.o cla
 	  update.o 
 
 # --- Rust integration (optional, activated with USE_RUST=1) ---
+CARGO ?= cargo
+
 ifdef USE_RUST
 RUST_LIB_PATH = ../target/release/libchaos_rust.a
 O_FILES := $(filter-out envconfig.o,$(O_FILES))
@@ -20,7 +22,7 @@ RUST_DEP = rust_lib
 
 .PHONY: rust_lib
 rust_lib:
-	$(HOME)/.cargo/bin/cargo build --release --manifest-path ../chaos-rust/Cargo.toml
+	$(CARGO) build --release --manifest-path ../chaos-rust/Cargo.toml
 endif
 # --- End Rust integration ---
 

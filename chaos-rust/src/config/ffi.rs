@@ -5,6 +5,7 @@
 //! These functions return *const c_char pointers that remain valid
 //! for the lifetime of the program.
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::Mutex;
@@ -16,28 +17,39 @@ use super::{area_file_path_rotating, get_area_dir_str, get_area_list_path_str,
             get_note_file_path_str, get_player_dir_str, get_player_temp_dir_str,
             get_shutdown_file_path_str, get_typo_file_path_str, init_path_overrides_impl};
 
-/// Static cache of CStrings so that returned pointers remain valid for program lifetime.
-static FFI_CACHE: OnceLock<Mutex<Vec<CString>>> = OnceLock::new();
+/// Static cache of CStrings keyed by their string content.
+/// Each unique path string is cached exactly once, avoiding unbounded growth.
+/// Pointers returned remain valid for the program lifetime since entries are never removed.
+static FFI_CACHE: OnceLock<Mutex<HashMap<String, CString>>> = OnceLock::new();
 
 /// Get or initialize the FFI cache.
-fn cache() -> &'static Mutex<Vec<CString>> {
-    FFI_CACHE.get_or_init(|| Mutex::new(Vec::new()))
+fn cache() -> &'static Mutex<HashMap<String, CString>> {
+    FFI_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Cache a Rust string and return a *const c_char that is valid for the program lifetime.
+/// If the string was previously cached, returns the existing pointer without allocating.
 fn cache_str(s: &str) -> *const c_char {
+    let mut guard = cache().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(existing) = guard.get(s) {
+        return existing.as_ptr();
+    }
     let c_string = CString::new(s).unwrap_or_else(|_| CString::new("").unwrap());
-    let mut guard = cache().lock().unwrap();
-    guard.push(c_string);
-    guard.last().unwrap().as_ptr()
+    let ptr = c_string.as_ptr();
+    guard.insert(s.to_owned(), c_string);
+    ptr
 }
 
 /// Rotating buffer for area_file_path FFI results.
 /// We keep 4 CStrings alive at a time matching the C behavior.
+/// Slots are overwritten in round-robin fashion; the returned pointer remains valid
+/// until 4 subsequent area_file_path calls overwrite it (matching C semantics).
 static AREA_FILE_CACHE: OnceLock<Mutex<AreaFileCache>> = OnceLock::new();
 
+const ROTATING_SLOTS: usize = 4;
+
 struct AreaFileCache {
-    slots: [Option<CString>; 4],
+    slots: [Option<CString>; ROTATING_SLOTS],
     index: usize,
 }
 
@@ -50,7 +62,7 @@ impl AreaFileCache {
     }
 
     fn next(&mut self, value: &str) -> *const c_char {
-        self.index = (self.index + 1) % 4;
+        self.index = (self.index + 1) % ROTATING_SLOTS;
         let c_string = CString::new(value).unwrap_or_else(|_| CString::new("").unwrap());
         let ptr = c_string.as_ptr();
         self.slots[self.index] = Some(c_string);
@@ -147,6 +159,6 @@ pub extern "C" fn area_file_path(filename: *const c_char) -> *const c_char {
     };
 
     let result = area_file_path_rotating(fname);
-    let mut guard = area_file_cache().lock().unwrap();
-    guard.next(result)
+    let mut guard = area_file_cache().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    guard.next(&result)
 }

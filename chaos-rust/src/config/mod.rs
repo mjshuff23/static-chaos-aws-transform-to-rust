@@ -7,7 +7,7 @@
 
 use std::env;
 use std::path::Path;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 /// Default compiled-in paths matching the C defaults.
 const DEFAULT_PLAYER_DIR: &str = "../player/";
@@ -23,9 +23,6 @@ const DEFAULT_NOTE_FILE: &str = "area/notes.txt";
 const DEFAULT_SHUTDOWN_FILE: &str = "area/shutdown.txt";
 const DEFAULT_COPYOVER_FILE: &str = "area/copyover.txt";
 const DEFAULT_MOBPROG_DIR: &str = "area/MOBProgs";
-
-/// Number of rotating area path buffer slots.
-const ROTATING_BUFFER_SIZE: usize = 4;
 
 /// Holds all resolved path values after initialization.
 #[derive(Debug, Clone)]
@@ -47,34 +44,6 @@ pub struct PathConfig {
 
 /// Global static holding the resolved path configuration.
 static PATH_CONFIG: OnceLock<PathConfig> = OnceLock::new();
-
-/// Rotating buffer for area_file_path results.
-static ROTATING_AREA_PATHS: OnceLock<Mutex<RotatingBuffer>> = OnceLock::new();
-
-struct RotatingBuffer {
-    slots: [String; ROTATING_BUFFER_SIZE],
-    index: usize,
-}
-
-impl RotatingBuffer {
-    fn new() -> Self {
-        RotatingBuffer {
-            slots: [
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-            ],
-            index: 0,
-        }
-    }
-
-    fn next(&mut self, value: String) -> &str {
-        self.index = (self.index + 1) % ROTATING_BUFFER_SIZE;
-        self.slots[self.index] = value;
-        &self.slots[self.index]
-    }
-}
 
 /// Check if a path exists on the filesystem.
 pub fn path_exists(path: &str) -> bool {
@@ -303,7 +272,7 @@ pub fn init_path_overrides_impl() -> &'static PathConfig {
 
 /// Get the resolved player directory path.
 pub fn get_player_dir_str() -> &'static str {
-    &PATH_CONFIG.get().map_or(DEFAULT_PLAYER_DIR, |c| &c.player_dir)
+    PATH_CONFIG.get().map_or(DEFAULT_PLAYER_DIR, |c| &c.player_dir)
 }
 
 /// Get the resolved player temp directory path.
@@ -379,27 +348,16 @@ pub fn area_file_path_str(filename: &str) -> String {
 }
 
 /// Internal function for the rotating buffer version (used by FFI layer).
-/// Returns a pointer to a stable string in the rotating buffer.
-pub fn area_file_path_rotating(filename: &str) -> &'static str {
-    let buf = ROTATING_AREA_PATHS.get_or_init(|| Mutex::new(RotatingBuffer::new()));
-    let mut guard = buf.lock().unwrap();
-
+/// Returns an owned String with the resolved area file path.
+/// The rotating buffer is managed at the FFI layer (ffi.rs) where CStrings
+/// are cached with proper lifetime guarantees.
+pub fn area_file_path_rotating(filename: &str) -> String {
     if filename.is_empty() {
-        return get_area_dir_str();
+        return get_area_dir_str().to_string();
     }
 
     let area_dir = get_area_dir_str();
-    let result = join_path(area_dir, filename);
-    guard.next(result);
-
-    // We need to return a &'static str. Since the buffer is in a static OnceLock,
-    // the slots persist for the program lifetime. We get the pointer before dropping the guard.
-    let index = guard.index;
-    let ptr = guard.slots[index].as_str() as *const str;
-    // SAFETY: The rotating buffer is in a static OnceLock and the string data
-    // remains valid until it is overwritten (after 4 more calls). This matches
-    // the C behavior exactly.
-    unsafe { &*ptr }
+    join_path(area_dir, filename)
 }
 
 // --- Public wrappers for testing internal configure functions ---
@@ -661,28 +619,28 @@ mod tests {
     #[test]
     fn test_rotating_buffer() {
         let _lock = TEST_MUTEX.lock().unwrap();
-        let mut buf = RotatingBuffer::new();
 
-        let _ = buf.next("first".to_string());
-        assert_eq!(buf.slots[1], "first");
-        assert_eq!(buf.index, 1);
+        // Test that area_file_path_rotating produces correct joined paths
+        // (The actual rotating CString buffer is now in ffi.rs)
+        let result1 = area_file_path_rotating("first.are");
+        assert!(result1.ends_with("first.are"));
 
-        let _ = buf.next("second".to_string());
-        assert_eq!(buf.slots[2], "second");
-        assert_eq!(buf.index, 2);
+        let result2 = area_file_path_rotating("second.are");
+        assert!(result2.ends_with("second.are"));
 
-        let _ = buf.next("third".to_string());
-        assert_eq!(buf.slots[3], "third");
-        assert_eq!(buf.index, 3);
+        let result3 = area_file_path_rotating("third.are");
+        assert!(result3.ends_with("third.are"));
 
-        let _ = buf.next("fourth".to_string());
-        assert_eq!(buf.slots[0], "fourth");
-        assert_eq!(buf.index, 0);
+        let result4 = area_file_path_rotating("fourth.are");
+        assert!(result4.ends_with("fourth.are"));
 
-        // Verify wrap-around: fifth call overwrites slot 1
-        let _ = buf.next("fifth".to_string());
-        assert_eq!(buf.slots[1], "fifth");
-        assert_eq!(buf.index, 1);
+        // Fifth call still works (no overwrite issue since we return owned Strings)
+        let result5 = area_file_path_rotating("fifth.are");
+        assert!(result5.ends_with("fifth.are"));
+
+        // Verify empty filename returns area dir
+        let empty_result = area_file_path_rotating("");
+        assert!(!empty_result.is_empty());
     }
 
     #[test]

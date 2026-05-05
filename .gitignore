@@ -53,7 +53,6 @@ build.log
 
 # Rust build artifacts
 target/
-Cargo.lock
 
 # Runtime data
 chaosium.log
