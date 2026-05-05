@@ -1,1 +1,0 @@
-/home/yokito/projects/static-chaos-aws-transform-to-rust/target/release/libchaos_rust.rlib: /home/yokito/projects/static-chaos-aws-transform-to-rust/chaos-rust/src/config/ffi.rs /home/yokito/projects/static-chaos-aws-transform-to-rust/chaos-rust/src/config/mod.rs /home/yokito/projects/static-chaos-aws-transform-to-rust/chaos-rust/src/lib.rs

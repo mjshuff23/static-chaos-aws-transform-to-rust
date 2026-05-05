@@ -1,6 +1,0 @@
-make: Entering directory '/home/yokito/projects/static-chaos-aws-transform-to-rust/src'
-Makefile:36: warning: ignoring prerequisites on suffix rule definition
-gcc -c -O -Wall -g  -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector envconfig.c
-rm -f chaosium 
-gcc -O -g -o chaosium act_comm.o act_info.o act_move.o act_obj.o act_wiz.o bit.o board.o clan.o comm.o const.o db.o envconfig.o fight.o fist.o handler.o interp.o mazoku.o magic.o mem.o mob_commands.o mob_prog.o olc.o olc_act.o olc_save.o patryn.o quest.o saiyan.o save.o special.o soldier.o sorcerer.o string.o suit.o update.o  -lcrypt -lm
-make: Leaving directory '/home/yokito/projects/static-chaos-aws-transform-to-rust/src'
