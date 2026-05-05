@@ -1,9 +1,10 @@
-//! C/Rust parity harness for envconfig path resolution.
+//! Expected-value parity tests for envconfig path resolution.
 //!
 //! These tests verify that the Rust implementation produces identical output
 //! to the C envconfig.c for all tested environment variable combinations.
-//! The expected values are derived directly from manual analysis of the C code
-//! in src/envconfig.c, ensuring bit-for-bit string parity.
+//! Expected values are derived from manual analysis of src/envconfig.c source
+//! (not from invoking a compiled C oracle). Each assertion documents the
+//! specific C code path that produces the expected result.
 //!
 //! Test matrix:
 //! - CHAOS_ENV_ROOT set/unset

@@ -69,7 +69,7 @@ Runs 49 tests total:
 
 - 28 unit tests (config path resolution + xrand PRNG)
 - 8 integration tests (full init/getter cycle)
-- 13 parity tests (C-vs-Rust output comparison)
+- 13 parity tests (expected-value verification against C logic)
 
 ## Runtime -- Dev Server
 
@@ -105,14 +105,17 @@ The Rust workspace lives in `chaos-rust/` with modules:
 
 ## What's Next
 
-1. **xrand symbol replacement** -- Add `#ifndef USE_RUST_RAND` guards around
-   `number_mm`/`number_range`/`isquare` in `src/db.c`, then export the Rust
-   versions under the original C names.
+1. **PRNG runtime seeding** -- Implement `init_mm(current_time)` to match
+   db.c's startup seed path. Required before exporting `number_mm` /
+   `number_range` / `isquare` under original C symbol names.
 2. **bit.c pilot** -- Flag lookup/value/string utilities with static flag
    tables. Depends on `str_cmp` and `one_argument` wrappers.
-3. **Area file parser** (`db.c`) -- Complex, requires fixture testing against
+3. **Real C oracle parity test** -- Compile a small C harness that invokes
+   the actual C functions and compares output against Rust (currently tests
+   use manually-derived expected values).
+4. **Area file parser** (`db.c`) -- Complex, requires fixture testing against
    actual `.are` files.
-4. **Player save/load** (`save.c`) -- Must preserve exact file format
+5. **Player save/load** (`save.c`) -- Must preserve exact file format
    byte-for-byte.
 
 ## Project Layout

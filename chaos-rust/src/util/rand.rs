@@ -1,10 +1,19 @@
 //! Lagged Fibonacci PRNG matching src/xrand.c behavior exactly.
+//! Lagged Fibonacci PRNG and integer math utilities.
 //!
-//! The C implementation uses a static state array with indices managed
-//! via `piState[0]` (initialized flag), `piState[1]` (iState1), and
-//! `piState[2]` (iState2). Slots 3..57 hold the PRNG state.
+//! This module implements the core PRNG algorithm shared by src/xrand.c and
+//! src/db.c. Both use the same lagged Fibonacci generator; they differ only
+//! in seeding:
 //!
-//! This Rust version reproduces the same algorithm bit-for-bit.
+//! - **xrand.c** (standalone test): self-seeds with {1, 1, fib...}
+//! - **db.c** (runtime): seeds via `init_mm()` using `current_time`
+//!
+//! The current Rust implementation uses the deterministic self-seed path
+//! (matching xrand.c). To replace db.c symbols at runtime, `init_mm` seeding
+//! from an external timestamp must be added first.
+//!
+//! `isquare()` matches src/db.c (line 3445) which uses an iterative algorithm
+//! with a known off-by-one for perfect squares (strict-less-than loop).
 
 use std::sync::Mutex;
 
