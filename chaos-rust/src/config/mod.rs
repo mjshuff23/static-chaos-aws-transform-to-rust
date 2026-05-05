@@ -402,7 +402,19 @@ pub fn area_file_path_rotating(filename: &str) -> &'static str {
     unsafe { &*ptr }
 }
 
-// --- FFI module (extern "C" wrappers will be added in Step 3) ---
+// --- Public wrappers for testing internal configure functions ---
+
+/// Public wrapper for configure_area_paths (for integration testing).
+pub fn configure_area_paths_pub(root: Option<&str>) -> (String, String, String, String, String, String, String, String, String) {
+    configure_area_paths(root)
+}
+
+/// Public wrapper for configure_misc_dirs (for integration testing).
+pub fn configure_misc_dirs_pub(root: Option<&str>) -> (String, String) {
+    configure_misc_dirs(root)
+}
+
+// --- FFI module (extern "C" wrappers) ---
 pub mod ffi;
 
 #[cfg(test)]
