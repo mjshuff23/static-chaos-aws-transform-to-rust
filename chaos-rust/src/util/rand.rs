@@ -169,8 +169,10 @@ pub extern "C" fn isquare_ffi(num: i32) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_number_mm_deterministic_sequence() {
         reset_state();
         // After init, first few values should be deterministic
@@ -191,6 +193,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_number_range_bounds() {
         reset_state();
         for _ in 0..1000 {
@@ -206,6 +209,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_number_range_wide_range_no_overflow() {
         // This would overflow i32 in the C version: range = i32::MAX - i32::MIN + 1
         // Our Rust version handles it safely via i64 promotion.
@@ -219,6 +223,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_number_range_distribution() {
         reset_state();
         let mut counts = [0u32; 6];
@@ -261,6 +266,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_number_mm_range() {
         reset_state();
         // Generate many values, all must be in valid range
