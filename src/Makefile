@@ -22,7 +22,7 @@ RUST_DEP = rust_lib
 
 .PHONY: rust_lib
 rust_lib:
-	$(CARGO) build --release --manifest-path ../chaos-rust/Cargo.toml
+	$(CARGO) build --release --manifest-path ../chaos-rust/Cargo.toml --target-dir ../target
 endif
 # --- End Rust integration ---
 

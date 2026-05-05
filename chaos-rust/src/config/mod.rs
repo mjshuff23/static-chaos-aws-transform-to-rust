@@ -336,8 +336,7 @@ pub fn get_note_dir_str() -> &'static str {
 }
 
 /// Get the full path for an area file by joining area_dir with the filename.
-/// Uses a rotating 4-slot buffer so that up to 4 concurrent results remain valid.
-/// Returns a reference to the buffer slot string.
+/// Returns an owned String with the combined path.
 pub fn area_file_path_str(filename: &str) -> String {
     if filename.is_empty() {
         return get_area_dir_str().to_string();

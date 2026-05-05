@@ -5,7 +5,7 @@ A legacy C MUD server (~70k lines) being incrementally migrated to safe, idiomat
 ## Prerequisites
 
 | Tool | Purpose |
-|------|---------|
+| ------ | --------- |
 | **gcc** + **make** | Build the C server |
 | **Rust toolchain** (rustc, cargo) | Build the Rust library crate |
 | **libcrypt-dev** | Required by the C linker |
@@ -79,13 +79,14 @@ Logs are written to `env/dev/log/<timestamp>.log`.
 ## Current Migration Status
 
 | Module | Status | Notes |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | `src/envconfig.c` | ✅ Migrated | Behind `USE_RUST=1`; path resolution via `chaos-rust/src/config/` |
 | `src/xrand.c` | ⏳ Planned | Phase 1b optional pilot |
 | `src/bit.c` | ⏳ Planned | Phase 1b optional pilot |
 | All other modules | ❌ Not started | Deferred to later phases |
 
 The Rust workspace lives in `chaos-rust/` with modules:
+
 - `config/mod.rs` — Path resolution logic (replaces envconfig.c)
 - `config/ffi.rs` — C-compatible FFI boundary (`#[no_mangle] extern "C"` wrappers)
 
@@ -101,7 +102,7 @@ The Rust workspace lives in `chaos-rust/` with modules:
 
 ## Project Layout
 
-```
+```bash
 .
 ├── Cargo.toml              # Workspace root
 ├── Cargo.lock              # Tracked (app/server workspace)
